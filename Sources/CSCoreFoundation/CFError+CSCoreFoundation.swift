@@ -15,20 +15,20 @@ extension CFError: Error {
     public var _code: Int { Int(CFErrorGetCode(self)) }
     public var _userInfo: AnyObject? { CFErrorCopyUserInfo(self) }
 
-    public static func make(_ status: OSStatus) -> CFError {
-        let domain: CFString
-        let code: CFIndex
+    public static func make<I: BinaryInteger>(domain: String, code: I, userInfo: CFDictionary? = nil) -> CFError {
+        CFErrorCreate(kCFAllocatorDefault, CFString.fromString(domain), CFIndex(code), userInfo)
+    }
 
+    public static func make<I: BinaryInteger>(posixError: I, userInfo: CFDictionary? = nil) -> CFError {
+        self.make(domain: "NSPOSIXErrorDomain", code: CFIndex(posixError), userInfo: userInfo)
+    }
+
+    public static func make(osStatus status: OSStatus, userInfo: CFDictionary? = nil) -> CFError {
         let posixErrorBase: OSStatus = 100000
-
         if (posixErrorBase..<(posixErrorBase + 1000)).contains(status) {
-            domain = CFString.fromString("NSPOSIXErrorDomain")
-            code = CFIndex(status - posixErrorBase)
+            return self.make(posixError: status - posixErrorBase)
         } else {
-            domain = CFString.fromString("NSOSStatusErrorDomain")
-            code = CFIndex(status)
+            return self.make(domain: "NSOSStatusErrorDomain", code: CFIndex(status), userInfo: userInfo)
         }
-
-        return CFErrorCreate(kCFAllocatorDefault, domain, code, nil)
     }
 }
